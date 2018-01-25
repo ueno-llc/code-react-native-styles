@@ -1,29 +1,71 @@
 'use strict';
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
+import * as copyPaste from 'copy-paste';
+import * as css2rn from 'css-to-react-native';
 
-// this method is called when your extension is activated
-// your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
-
-    // Use the console to output diagnostic information (console.log) and errors (console.error)
-    // This line of code will only be executed once when your extension is activated
-    console.log('Congratulations, your extension "react-native-code-styles" is now active!');
-
-    // The command has been defined in the package.json file
-    // Now provide the implementation of the command with  registerCommand
-    // The commandId parameter must match the command field in package.json
-    let disposable = vscode.commands.registerCommand('extension.sayHello', () => {
-        // The code you place here will be executed every time your command is executed
-
-        // Display a message box to the user
-        vscode.window.showInformationMessage('Hello World!');
-    });
-
-    context.subscriptions.push(disposable);
+  let pasteCommand = new PasteCommand();
+  let disposable = vscode.commands.registerCommand('extension.ueno.pasteReactNativeStyles', () => {
+    pasteCommand.paste()
+  });
+  context.subscriptions.push(disposable);
 }
 
-// this method is called when your extension is deactivated
-export function deactivate() {
+export class PasteCommand {
+  
+  paste() {
+    copyPaste.paste((error, content) => {
+      if (content) {
+        this.process(content)
+      }
+    })
+  }
+
+  format(input): String {
+    try {
+      const strrf = str => str.trim().replace(/^"/, "'").replace(/",?$/, "'");
+      const rules = input.replace(/\/\*(.|\n)*?\*\//, '').split(';')
+        .map(item => item.split(':').map(x => String(x).trim())).filter(x => x && x[0] !== '');
+      const output = JSON.stringify(css2rn.default(rules), null, 2);
+      const ok = output.replace(/  \"(.*)\":(.*)\n/g, (n, a, b) => { return `  ${a}: ${strrf(b)},\n`; }).replace(/,,/g, ',');
+      return ok.substr(1, ok.length - 2).trim().replace(/\n\s+/g, '\n');
+    } catch (err) {
+      console.log('Error', err);
+      return input;
+    }
+  }
+
+  process(text) {
+    const config = vscode.workspace.getConfiguration('pasteAndIndent');
+    const editor = vscode.window.activeTextEditor;
+    const document = editor.document;
+    const selection = editor.selection;
+    const start = selection.start;
+    let offset = start.character;
+    const indentChar = editor.options.insertSpaces ? ' ' : '\t';
+    const selectedText = document.getText(selection);
+    const isSelectionEmpty = selectedText.length == 0;
+    const data = this.format(text).replace(/\n/g, `\n${indentChar.repeat(offset)}`);
+    if (isSelectionEmpty) {
+        this.insert(data)
+    } else {
+        this.replaceSelection(selection, data)
+    }
+  }
+
+  insert(content): Thenable<boolean> {
+    const startLine = vscode.window.activeTextEditor.selection.start.line;
+    const selection = vscode.window.activeTextEditor.selection;
+    const position = new vscode.Position(startLine, selection.start.character);
+    return vscode.window.activeTextEditor.edit((editBuilder) => {
+      editBuilder.insert(position, content);
+    });
+  }
+
+  replaceSelection(selection, content) {
+    const source = vscode.window.activeTextEditor.document.getText(selection);
+    vscode.window.activeTextEditor.edit((editBuilder) => {
+      editBuilder.replace(selection, content);
+    });
+  }
 }

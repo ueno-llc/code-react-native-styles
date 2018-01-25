@@ -11,14 +11,14 @@
         "Other"
     ],
     "activationEvents": [
-        "onCommand:extension.sayHello"
+        "onCommand:extension.ueno.pasteReactNativeStyles"
     ],
     "main": "./out/extension",
     "contributes": {
         "commands": [
             {
-                "command": "extension.sayHello",
-                "title": "Hello World"
+                "command": "extension.ueno.pasteReactNativeStyles",
+                "title": "Paste CSS to React Native styles"
             }
         ]
     },
@@ -30,9 +30,14 @@
         "test": "npm run compile && node ./node_modules/vscode/bin/test"
     },
     "devDependencies": {
+        "@types/copy-paste": "1.1.30",
+        "@types/mocha": "^2.2.42",
+        "@types/node": "7.0.52",
         "typescript": "^2.6.1",
-        "vscode": "^1.1.6",
-        "@types/node": "^7.0.43",
-        "@types/mocha": "^2.2.42"
+        "vscode": "^1.1.6"
+    },
+    "dependencies": {
+        "copy-paste": "1.3.0",
+        "css-to-react-native": "2.0.4"
     }
 }
